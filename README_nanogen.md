@@ -299,6 +299,12 @@ By default, the `.png` extension is appended unless `--noex` is used or the file
 
 ---
 
+## Multi-generator for images
+
+- In file 'page.cmd' You have an example of script to generate multipple images for multiple json files
+
+---
+
 ## License
 
 This project is open source. See the repository at [github.com/igorbrzezek/nanogen](https://github.com/igorbrzezek/nanogen) for license information.
