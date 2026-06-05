@@ -14,6 +14,22 @@ The tool is designed for batch image generation workflows where you have a large
 
 ---
 
+## Files in this project
+
+Project files:
+- nanogen.py
+- README_nanogen.md
+- start_chrome_debug.bat
+
+Help & Example Files
+- example.json
+- example_image_prompt.md
+- img_prompt_example.txt
+- page.cmd
+- page.html
+- page.json
+- style.css
+
 ## How It Works
 
 1. **Chrome** is launched in remote debugging mode on port `9222` (via `start_chrome_debug.bat`), already pointed at `https://gemini.google.com/`.
