@@ -258,6 +258,11 @@ Generated images are saved to the specified output directory (or the current dir
 
 By default, the `.png` extension is appended unless `--noex` is used or the filename already has a supported image extension (`.png`, `.jpg`, `.jpeg`, `.webp`, `.gif`, `.bmp`).
 
+## Example 'simple' prompt for generate .json file
+- Example file: img_prompt_example.txt
+- Put in directory, run Your AI
+- Write in Your AI: "Execute the commands written in the file: img_prompt_example.txt"
+
 ### Auxiliary Files
 
 | File | Description |
