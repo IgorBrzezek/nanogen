@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GSM Network Structure and Operation (1G - 4G)</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <nav class="menu-bar">
+        <a href="#" class="active">Home</a>
+        <a href="#">0: GSM Basics</a>
+        <a href="#">1: GSM & 4G/LTE</a>
+        <a href="#">2: 5G Architecture</a>
+        <a href="#">3: Physical Layer</a>
+        <a href="#">4: SDN/NFV/MEC</a>
+        <a href="#">5: Protocols</a>
+        <a href="#">6: Case Study</a>
+        <a href="#">7: Modem & AT Commands</a>
+    </nav>
+
+    <div class="slide">
+        <div class="header">
+            <span class="slide-number">1/5</span>
+            <h2 class="slide-title">History and Evolution of Cellular Networks</h2>
+        </div>
+        <div class="content">
+            <div class="text">
+                <h3>From 1G to 4G – Foundations of Modern Connectivity</h3>
+                <p>Before we discuss complex 5G systems, we must understand how mobile technology has evolved over the past 40 years. Each "generation" (G) brought a breakthrough in both technical and user experience.</p>
+                <ul>
+                    <li><strong>1G (Analog):</strong> Voice only, no standards (NMT, AMPS).</li>
+                    <li><strong>2G (Digital):</strong> GSM – the first worldwide standard, SMS, encryption.</li>
+                    <li><strong>3G (Multimedia):</strong> UMTS – internet access, video calls.</li>
+                    <li><strong>4G (IP-Native):</strong> LTE – a network based entirely on data packets.</li>
+                </ul>
+                <p>In this presentation, we will focus on how the network is built "from the inside out," starting with the legendary GSM standard.</p>
+            </div>
+            <div class="illustration">
+                <img src="images/gsm_01.jpg" alt="Network evolution diagram">
+            </div>
+        </div>
+    </div>
+
+    <div class="slide">
+        <div class="header">
+            <span class="slide-number">2/5</span>
+            <h2 class="slide-title">1G – The Analog Era (1980s)</h2>
+        </div>
+        <div class="content">
+            <div class="text">
+                <h3>First Steps of Mobility</h3>
+                <p>First-generation networks were based on analog FM (Frequency Modulation) transmission. The most well-known system in Poland was NMT 450 (Nordic Mobile Telephone), operated by the Centertel network.</p>
+                <ul>
+                    <li><strong>Frequency:</strong> 450 MHz (large range, low capacity).</li>
+                    <li><strong>Flaws:</strong> No encryption (conversations could be eavesdropped with a regular radio), no compatibility between countries.</li>
+                    <li><strong>Terminal:</strong> Suitcase-sized "phones," installed mainly in cars.</li>
+                </ul>
+                <p>However, 1G proved that people want to talk while on the move, which forced the creation of a digital standard.</p>
+            </div>
+            <div class="illustration">
+                <img src="images/gsm_02.jpg" alt="1G analog phone">
+            </div>
+        </div>
+    </div>
+
+    <div class="slide">
+        <div class="header">
+            <span class="slide-number">3/5</span>
+            <h2 class="slide-title">2G – The GSM Revolution (Global System for Mobile)</h2>
+        </div>
+        <div class="content">
+            <div class="text">
+                <h3>The World's Digital Standard</h3>
+                <p>The GSM standard (originally "Groupe Spécial Mobile") was created as a European initiative to unify cellular systems. It became the most popular standard in history.</p>
+                <ul>
+                    <li><strong>Digital transmission:</strong> Sound converted to bits, allowing compression and better quality.</li>
+                    <li><strong>Security:</strong> Introduction of the SIM card and radio signal encryption (A5 algorithm).</li>
+                    <li><strong>Roaming:</strong> Ability to use the same phone in different countries and with different operators.</li>
+                    <li><strong>New feature:</strong> Short Message Service (SMS).</li>
+                </ul>
+            </div>
+            <div class="illustration">
+                <img src="images/gsm_03.jpg" alt="GSM standard">
+            </div>
+        </div>
+    </div>
+
+    <div class="slide">
+        <div class="header">
+            <span class="slide-number">4/5</span>
+            <h2 class="slide-title">GSM – System Architecture (Division)</h2>
+        </div>
+        <div class="content">
+            <div class="text">
+                <h3>Three Main Subsystems</h3>
+                <p>The GSM network is not a monolith. It consists of three cooperating areas:</p>
+                <ul>
+                    <li><strong>BSS (Base Station Subsystem):</strong> The radio part we see every day (towers).</li>
+                    <li><strong>NSS (Network and Switching Subsystem):</strong> The network core, the heart of operations handling call switching.</li>
+                    <li><strong>OSS (Operation Support Subsystem):</strong> Management and monitoring systems for network operation by technicians.</li>
+                </ul>
+                <p>Understanding these layers is crucial for an engineer, as each one is responsible for a different stage of the connection.</p>
+            </div>
+            <div class="illustration">
+                <img src="images/gsm_04.jpg" alt="GSM architecture">
+            </div>
+        </div>
+    </div>
+
+    <div class="slide">
+        <div class="header">
+            <span class="slide-number">5/5</span>
+            <h2 class="slide-title">BSS – Base Station Subsystem</h2>
+        </div>
+        <div class="content">
+            <div class="text">
+                <h3>The Link Between Phone and Network</h3>
+                <p>The BSS subsystem consists of two key elements:</p>
+                <ul>
+                    <li><strong>BTS (Base Transceiver Station):</strong> The base station. A physical tower with antennas and radios that communicates directly with the phone (Um interface).</li>
+                    <li><strong>BSC (Base Station Controller):</strong> The base station controller. One BSC manages dozens of BTS stations. It is responsible for allocating radio channels and deciding on handovers (switching a user between towers).</li>
+                </ul>
+                <p>The BTS is "dumb" – it only performs radio tasks. The intelligence (control logic) resides in the BSC.</p>
+            </div>
+            <div class="illustration">
+                <img src="images/gsm_05.jpg" alt="BTS and BSC">
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
