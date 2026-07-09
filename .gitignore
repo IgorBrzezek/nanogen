@@ -1,1 +1,8 @@
 __pycache__/
+*.png
+*.jpg
+*.log
+*.scr
+*.bak
+*.pwd
+*.err
