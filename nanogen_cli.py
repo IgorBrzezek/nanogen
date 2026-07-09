@@ -47,7 +47,7 @@ except ImportError:
 # Metadata
 # ---------------------------------------------------------------------------
 __CODEAUTH__ = "Igor Brzezek"
-__CODEVER__ = "0.0.20"
+__CODEVER__ = "0.0.1"
 __CODEDATE__ = "09.07.2026"
 __CODEGIT__ = "https://github.com/igorbrzezek/nanogen"
 
