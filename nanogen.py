@@ -1799,49 +1799,38 @@ def run_gemini_session(args):
         print_info("No browser connection required.\n")
     
     queue = []
-    
-    # Pre-build set of existing filenames for fast skip checks (single directory scan
-    # instead of one os.path.exists() network call per file, critical for remote dirs).
-    existing_files = set()
-    if SKIP_MODE and os.path.exists(args.out):
+    existing = set()
+    if SKIP_MODE and os.path.isdir(args.out):
         try:
-            # os.scandir is faster than os.listdir + subsequent stats
-            t0 = time.time()
-            existing_files = set(entry.name for entry in os.scandir(args.out))
-            print_debug(f"Scanned directory ({len(existing_files)} files) in {time.time()-t0:.3f}s")
+            existing = set(os.listdir(args.out))
         except Exception:
-            existing_files = set()
+            existing = set()
     
     if args.input_file:
         try:
             with open(args.input_file, 'r', encoding='utf-8') as f:
-                t0 = time.time()
                 data = json.load(f)
-                print_debug(f"Loaded JSON in {time.time()-t0:.3f}s")
-                
-                t0 = time.time()
                 if isinstance(data, dict):
                     for fname, prmt in data.items():
-                        fname_str = str(fname)
+                        s = str(fname)
                         if SKIP_MODE:
-                            check_fname = get_final_filename(fname_str)
-                            if check_fname in existing_files:
-                                LOG_LINES.append(f"SKIPPED: {check_fname}")
+                            t = get_final_filename(s)
+                            if t in existing:
+                                LOG_LINES.append(f"SKIPPED: {t}")
                                 SUCCESS_COUNT += 1
                                 continue
-                        queue.append((prmt, fname_str))
+                        queue.append((prmt, s))
                 elif isinstance(data, list):
                     for item in data:
                         if "prompt" in item and "filename" in item:
-                            fname_str = str(item["filename"])
+                            s = str(item["filename"])
                             if SKIP_MODE:
-                                check_fname = get_final_filename(fname_str)
-                                if check_fname in existing_files:
-                                    LOG_LINES.append(f"SKIPPED: {check_fname}")
+                                t = get_final_filename(s)
+                                if t in existing:
+                                    LOG_LINES.append(f"SKIPPED: {t}")
                                     SUCCESS_COUNT += 1
                                     continue
-                            queue.append((item["prompt"], fname_str))
-                print_debug(f"Pre-filter processed {len(data)} entries in {time.time()-t0:.3f}s")
+                            queue.append((item["prompt"], s))
         except Exception as e:
             print_error(f"Error loading JSON: {e}")
             return
@@ -1849,11 +1838,10 @@ def run_gemini_session(args):
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         safe_prompt = re.sub(r'[\\/*?:"<>|]', "", args.prompt)[:20].strip()
         fname = f"{safe_prompt}_{timestamp}"
-        
         if SKIP_MODE:
-            check_fname = get_final_filename(fname)
-            if check_fname in existing_files:
-                LOG_LINES.append(f"SKIPPED: {check_fname}")
+            t = get_final_filename(fname)
+            if t in existing:
+                LOG_LINES.append(f"SKIPPED: {t}")
                 SUCCESS_COUNT += 1
             else:
                 queue.append((args.prompt, fname))
