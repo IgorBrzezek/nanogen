@@ -17,8 +17,8 @@ init(autoreset=True)
 
 # ---=== Code info ===---
 __CODEAUTH__ = "Igor Brzezek"
-__CODEVER__ = "0.0.17"
-__CODEDATE__ = "04.06.2026"
+__CODEVER__ = "0.0.18"
+__CODEDATE__ = "09.07.2026"
 __CODEGIT__ = "https://github.com/igorbrzezek/nanogen"
 
 class Logger(object):

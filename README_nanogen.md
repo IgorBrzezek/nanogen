@@ -1,7 +1,7 @@
 # Nanogen — Gemini Imagen Generator Automator
 
 **Author:** Igor Brzezek  
-**Version:** 0.0.17 (2026-06-04)  
+**Version:** 0.0.18 (09.07.2026)
 **Repository:** [github.com/igorbrzezek/nanogen](https://github.com/igorbrzezek/nanogen)
 
 ---
