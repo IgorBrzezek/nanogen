@@ -9,7 +9,6 @@ os.environ["NODE_OPTIONS"] = "--no-warnings"
 import json
 import random
 from datetime import datetime
-from playwright.sync_api import sync_playwright
 from colorama import Fore, Back, Style, init
 
 # Initialize colorama for cross-platform color support
@@ -216,10 +215,20 @@ def process_single_prompt(page, prompt, filename_base, output_dir, add_prompt=No
         final_filename = get_final_filename(filename_base)
         filepath = os.path.join(output_dir, final_filename)
         if os.path.exists(filepath):
-            print_info(f"[SKIP] Skipping existing file: {final_filename}")
-            LOG_LINES.append(f"{progress_prefix} {final_filename} | SKIPPED")
-            SUCCESS_COUNT += 1
-            return True
+            file_size = os.path.getsize(filepath)
+            _, ext = os.path.splitext(final_filename)
+            min_size = 0
+            if ext.lower() in ['.jpg', '.jpeg']:
+                min_size = 1024
+            elif ext.lower() == '.png':
+                min_size = 256
+            if file_size >= min_size:
+                print_info(f"[SKIP] Skipping existing file: {final_filename}")
+                LOG_LINES.append(f"{progress_prefix} {final_filename} | SKIPPED")
+                SUCCESS_COUNT += 1
+                return True
+            else:
+                print_warning(f"[RE-GEN] {final_filename} exists but is too small ({file_size} bytes), regenerating...")
     
     # Retry logic info for rate limits
     limit_retries = 3
@@ -591,7 +600,7 @@ def process_single_prompt(page, prompt, filename_base, output_dir, add_prompt=No
                 type_mapping = {
                     'fast': ['1.5 Flash', 'Gemini 1.5 Flash', 'Szybki', 'Szybkie', 'Flash 2.0', 'Flash', 'Fast', 'Gemini Flash'],
                     'think': ['Myślący', 'Myślenie', 'Thinking', 'Deep Thinking', 'Gemini Thinking'],
-                    'pro': ['1.5 Pro', 'Gemini 1.5 Pro', 'Pro 1.5', 'Pro 2.0', 'Pro', 'Zaawansowany', 'Advanced', 'Gemini Advanced', 'Ultra'],
+                    'pro': ['1.5 Pro', 'Gemini 1.5 Pro', 'Pro 1.5', 'Pro 2.0', 'Gemini 2.0 Pro', 'Gemini Pro 2.0', 'Pro', 'Zaawansowany', 'Advanced', 'Gemini Advanced', 'Ultra', 'Gemini Pro Exp', 'Gemini Pro', 'Pro Exp'],
                     'flash': ['1.5 Flash', 'Gemini 1.5 Flash', 'Flash 1.5', 'Flash 2.0', 'Gemini Flash', 'Flash'],
                     'flash-lite': ['1.5 Flash-8B', 'Gemini 1.5 Flash-8B', 'Flash-Lite', 'Flash Lite', 'Gemini Flash-Lite']
                 }
@@ -615,7 +624,9 @@ def process_single_prompt(page, prompt, filename_base, output_dir, add_prompt=No
                                 f'[role="menu"] :text-is("{term}")',
                                 f'[role="menu"] span:text-is("{term}")',
                                 f'[role="menu"] div:text-is("{term}")',
+                                f'[role="menu"] :has-text("{term}")',
                                 f'[role="listbox"] :text-is("{term}")',
+                                f'[role="listbox"] :has-text("{term}")',
                                 f'[role="menuitem"]:text-is("{term}")',
                                 f'[role="option"]:text-is("{term}")',
                             ]
@@ -650,7 +661,7 @@ def process_single_prompt(page, prompt, filename_base, output_dir, add_prompt=No
                                                 let node;
                                                 while (node = walker.nextNode()) {{
                                                     let text = node.innerText?.trim();
-                                                    if (text === targetText || (text && text.includes(targetText) && text.length <= targetText.length + 15)) {{
+                                                    if (text === targetText || (text && text.includes(targetText) && text.length <= targetText.length + 30)) {{
                                                         let parentText = node.parentNode ? node.parentNode.innerText : "";
                                                         if (targetText === "Flash" && (text.includes("Lite") || text.includes("lite") || text.includes("8B") || parentText.includes("Lite"))) continue;
                                                         node.click();
@@ -728,7 +739,7 @@ def process_single_prompt(page, prompt, filename_base, output_dir, add_prompt=No
                             continue
 
                 if selector_opened:
-                    # Inside the menu, find and click "Poziom myślenia" section to expand it
+                    # Inside the menu, find and click thinking section to expand it
                     poziom_clicked = False
                     for sel in [
                         'button:has-text("Poziom myślenia")',
@@ -738,6 +749,8 @@ def process_single_prompt(page, prompt, filename_base, output_dir, add_prompt=No
                         '[role="listbox"] button:has-text("Poziom myślenia")',
                         'button:has-text("Thinking")',
                         '[role="menu"] button:has-text("Thinking")',
+                        'button:has-text("Myślenie")',
+                        '[role="menu"] button:has-text("Myślenie")',
                     ]:
                         try:
                             elem = page.locator(sel).first
@@ -751,33 +764,42 @@ def process_single_prompt(page, prompt, filename_base, output_dir, add_prompt=No
                             continue
 
                     # Select the target thinking mode
-                    if poziom_clicked:
-                        targets = ['Standardowy', 'Basic'] if think_mode == 'basic' else ['Rozszerzony', 'Extended']
-                        for target in targets:
-                            mode_selectors = [
-                                f'[role="menu"] [role="radio"]:text-is("{target}")',
-                                f'[role="menu"] button:text-is("{target}")',
-                                f'[role="menu"] span:text-is("{target}")',
-                                f'[role="listbox"] [role="radio"]:text-is("{target}")',
-                                f'[role="listbox"] button:text-is("{target}")',
-                                f'[role="radio"]:text-is("{target}")',
-                                f'button:text-is("{target}")',
-                            ]
-                            for sel in mode_selectors:
-                                try:
-                                    elem = page.locator(sel).first
-                                    if elem.is_visible(timeout=1000):
-                                        elem.click()
-                                        print_debug(f"Selected thinking mode '{target}' using: {sel}")
-                                        poziom_clicked = True
-                                        time.sleep(0.5)
-                                        break
-                                except:
-                                    continue
-                            if poziom_clicked:
-                                break
+                    if think_mode == 'basic':
+                        targets = ['Standardowy', 'Myślenie standardowy', 'Podstawowy', 'Basic']
+                    else:
+                        targets = ['Rozszerzony', 'Myślenie rozszerzony', 'Extended', 'Zaawansowany']
 
-                    if not poziom_clicked:
+                    target_found = False
+                    for target in targets:
+                        mode_selectors = [
+                            f'[role="menu"] [role="radio"]:text-is("{target}")',
+                            f'[role="menu"] button:text-is("{target}")',
+                            f'[role="menu"] span:text-is("{target}")',
+                            f'[role="menu"] [role="radio"]:has-text("{target}")',
+                            f'[role="menu"] button:has-text("{target}")',
+                            f'[role="listbox"] [role="radio"]:text-is("{target}")',
+                            f'[role="listbox"] button:text-is("{target}")',
+                            f'[role="listbox"] [role="radio"]:has-text("{target}")',
+                            f'[role="radio"]:text-is("{target}")',
+                            f'button:text-is("{target}")',
+                            f'[role="radio"]:has-text("{target}")',
+                            f'button:has-text("{target}")',
+                        ]
+                        for sel in mode_selectors:
+                            try:
+                                elem = page.locator(sel).first
+                                if elem.is_visible(timeout=1000):
+                                    elem.click()
+                                    print_debug(f"Selected thinking mode '{target}' using: {sel}")
+                                    target_found = True
+                                    time.sleep(0.5)
+                                    break
+                            except:
+                                continue
+                        if target_found:
+                            break
+
+                    if not target_found:
                         print_warning(f"Could not find thinking mode selector for: {think_mode}")
 
                     # Close the menu
@@ -1763,7 +1785,7 @@ def print_summary():
     write_log_file()
 
 def run_gemini_session(args):
-    global START_TIME, TOTAL_IMAGES
+    global START_TIME, TOTAL_IMAGES, SUCCESS_COUNT
     
     # Acquire lock before starting session
     acquire_lock()
@@ -1783,36 +1805,43 @@ def run_gemini_session(args):
     existing_files = set()
     if SKIP_MODE and os.path.exists(args.out):
         try:
-            existing_files = set(os.listdir(args.out))
+            # os.scandir is faster than os.listdir + subsequent stats
+            t0 = time.time()
+            existing_files = set(entry.name for entry in os.scandir(args.out))
+            print_debug(f"Scanned directory ({len(existing_files)} files) in {time.time()-t0:.3f}s")
         except Exception:
             existing_files = set()
     
     if args.input_file:
         try:
             with open(args.input_file, 'r', encoding='utf-8') as f:
+                t0 = time.time()
                 data = json.load(f)
+                print_debug(f"Loaded JSON in {time.time()-t0:.3f}s")
                 
-                def add_to_queue(prmt, fname):
-                    fname_str = str(fname)
-                    # We no longer strip extensions here, as process_single_prompt handles them
-                        
-                    if SKIP_MODE:
-                        check_fname = get_final_filename(fname_str)
-                        if check_fname in existing_files:
-                            print_info(f"[SKIP] Skipping existing file: {check_fname} (from json)")
-                            LOG_LINES.append(f"SKIPPED: {check_fname}")
-                            global SUCCESS_COUNT
-                            SUCCESS_COUNT += 1
-                            return
-                    queue.append((prmt, fname_str))
-
+                t0 = time.time()
                 if isinstance(data, dict):
                     for fname, prmt in data.items():
-                        add_to_queue(prmt, fname)
+                        fname_str = str(fname)
+                        if SKIP_MODE:
+                            check_fname = get_final_filename(fname_str)
+                            if check_fname in existing_files:
+                                LOG_LINES.append(f"SKIPPED: {check_fname}")
+                                SUCCESS_COUNT += 1
+                                continue
+                        queue.append((prmt, fname_str))
                 elif isinstance(data, list):
                     for item in data:
                         if "prompt" in item and "filename" in item:
-                            add_to_queue(item["prompt"], item["filename"])
+                            fname_str = str(item["filename"])
+                            if SKIP_MODE:
+                                check_fname = get_final_filename(fname_str)
+                                if check_fname in existing_files:
+                                    LOG_LINES.append(f"SKIPPED: {check_fname}")
+                                    SUCCESS_COUNT += 1
+                                    continue
+                            queue.append((item["prompt"], fname_str))
+                print_debug(f"Pre-filter processed {len(data)} entries in {time.time()-t0:.3f}s")
         except Exception as e:
             print_error(f"Error loading JSON: {e}")
             return
@@ -1824,9 +1853,7 @@ def run_gemini_session(args):
         if SKIP_MODE:
             check_fname = get_final_filename(fname)
             if check_fname in existing_files:
-                print_info(f"[SKIP] Skipping existing file: {check_fname}")
                 LOG_LINES.append(f"SKIPPED: {check_fname}")
-                global SUCCESS_COUNT
                 SUCCESS_COUNT += 1
             else:
                 queue.append((args.prompt, fname))
@@ -1834,13 +1861,19 @@ def run_gemini_session(args):
             queue.append((args.prompt, fname))
     
     TOTAL_IMAGES = len(queue)
+    skip_count = SUCCESS_COUNT  # SUCCESS_COUNT was incremented for each skipped file
+    
+    if skip_count > 0:
+        print_info(f"Skipped {skip_count} existing file(s)")
     
     # Show initial info in non-debug mode
     if not DEBUG_MODE:
-        print_color(f"Total images to generate: {TOTAL_IMAGES}", Fore.CYAN if USE_COLOR else "")
-        print_info("")
+        if TOTAL_IMAGES > 0:
+            print_color(f"Total images to generate: {TOTAL_IMAGES}", Fore.CYAN if USE_COLOR else "")
+            print_info("")
     else:
-        print_debug(f"Loaded {len(queue)} tasks.")
+        if TOTAL_IMAGES > 0:
+            print_debug(f"Loaded {len(queue)} tasks.")
 
     # In SIMULATION MODE, bypass Playwright entirely
     if SIMUL_MODE:
@@ -1885,7 +1918,14 @@ def run_gemini_session(args):
         print_summary()
         return
 
+    # If all files were skipped, exit immediately without connecting to browser
+    if not queue:
+        print_info("All files already exist. Nothing to generate.")
+        print_summary()
+        return
+
     # Normal execution with Playwright
+    from playwright.sync_api import sync_playwright
     with sync_playwright() as p:
         try:
             cdp_url = f"http://{CDP_HOST}:{CDP_PORT}"
