@@ -17,8 +17,8 @@ init(autoreset=True)
 
 # ---=== Code info ===---
 __CODEAUTH__ = "Igor Brzezek"
-__CODEVER__ = "0.0.20"
-__CODEDATE__ = "09.07.2026"
+__CODEVER__ = "0.0.22"
+__CODEDATE__ = "02.10.2026"
 __CODEGIT__ = "https://github.com/igorbrzezek/nanogen"
 
 class Logger(object):
@@ -597,12 +597,14 @@ def process_single_prompt(page, prompt, filename_base, output_dir, add_prompt=No
                     print_debug("Could not open model selector dropdown, trying direct menu item selection...")
                 
                 # Map type argument to search terms (English and Polish)
+                # W menu numery wersji modeli (np. Pro 2.0 / Flash 2.5) zmieniaja sie,
+                # dlatego szukamy tylko po frazie modelu - bez numerow wersji.
                 type_mapping = {
-                    'fast': ['1.5 Flash', 'Gemini 1.5 Flash', 'Szybki', 'Szybkie', 'Flash 2.0', 'Flash', 'Fast', 'Gemini Flash'],
-                    'think': ['Myślący', 'Myślenie', 'Thinking', 'Deep Thinking', 'Gemini Thinking'],
-                    'pro': ['1.5 Pro', 'Gemini 1.5 Pro', 'Pro 1.5', 'Pro 2.0', 'Gemini 2.0 Pro', 'Gemini Pro 2.0', 'Pro', 'Zaawansowany', 'Advanced', 'Gemini Advanced', 'Ultra', 'Gemini Pro Exp', 'Gemini Pro', 'Pro Exp'],
-                    'flash': ['1.5 Flash', 'Gemini 1.5 Flash', 'Flash 1.5', 'Flash 2.0', 'Gemini Flash', 'Flash'],
-                    'flash-lite': ['1.5 Flash-8B', 'Gemini 1.5 Flash-8B', 'Flash-Lite', 'Flash Lite', 'Gemini Flash-Lite']
+                    'fast': ['Flash', 'Szybki', 'Szybkie', 'Fast'],
+                    'think': ['Myślący', 'Myślenie', 'Thinking', 'Deep Thinking'],
+                    'pro': ['Pro'],
+                    'flash': ['Flash'],
+                    'flash-lite': ['Flash-Lite', 'Flash Lite']
                 }
                 
                 search_terms = type_mapping.get(type_arg.lower(), [])
@@ -633,8 +635,8 @@ def process_single_prompt(page, prompt, filename_base, output_dir, add_prompt=No
                             
                             if term == "Flash":
                                 selectors = [
-                                    '[role="menu"] [role="menuitem"]:has-text("Flash"):not(:has-text("Lite")):not(:has-text("lite"))',
-                                    '[role="listbox"] [role="option"]:has-text("Flash"):not(:has-text("Lite")):not(:has-text("lite"))',
+                                    '[role="menu"] [role="menuitem"]:has-text("Flash"):not(:has-text("Lite")):not(:has-text("lite")):not(:has-text("Thinking")):not(:has-text("Myślenie"))',
+                                    '[role="listbox"] [role="option"]:has-text("Flash"):not(:has-text("Lite")):not(:has-text("lite")):not(:has-text("Thinking")):not(:has-text("Myślenie"))',
                                 ] + selectors
                             
                             for selector in selectors:
@@ -655,15 +657,17 @@ def process_single_prompt(page, prompt, filename_base, output_dir, add_prompt=No
                                 try:
                                     clicked = page.evaluate(f"""
                                         (targetText) => {{
-                                            const containers = document.querySelectorAll('[role="menu"], [role="listbox"], .model-selector-menu');
+                                            const target = targetText.toLowerCase();
+                                            const containers = document.querySelectorAll('[role="menu"], [role="listbox"], [role="radiogroup"], .model-selector-menu');
                                             for (const menu of containers) {{
                                                 const walker = document.createTreeWalker(menu, NodeFilter.SHOW_ELEMENT);
                                                 let node;
                                                 while (node = walker.nextNode()) {{
-                                                    let text = node.innerText?.trim();
-                                                    if (text === targetText || (text && text.includes(targetText) && text.length <= targetText.length + 30)) {{
-                                                        let parentText = node.parentNode ? node.parentNode.innerText : "";
-                                                        if (targetText === "Flash" && (text.includes("Lite") || text.includes("lite") || text.includes("8B") || parentText.includes("Lite"))) continue;
+                                                    let text = (node.innerText || "").trim();
+                                                    let lower = text.toLowerCase();
+                                                    if (lower === target || (lower.includes(target) && text.length <= targetText.length + 60)) {{
+                                                        let parentText = node.parentNode ? node.parentNode.innerText.toLowerCase() : "";
+                                                        if (target === "flash" && (lower.includes("lite") || lower.includes("8b") || lower.includes("thinking") || lower.includes("myślenie") || parentText.includes("lite"))) continue;
                                                         node.click();
                                                         return true;
                                                     }}
@@ -739,38 +743,30 @@ def process_single_prompt(page, prompt, filename_base, output_dir, add_prompt=No
                             continue
 
                 if selector_opened:
-                    # Inside the menu, find and click thinking section to expand it
-                    poziom_clicked = False
-                    for sel in [
+                    # Select the target thinking mode
+                    # PL: "Myślenie rozszerzone", EN: "Extended thinking" (w menu poziomy
+                    # myslenia moga byc tez skrocone do "Rozszerzone" / "Extended").
+                    if think_mode == 'basic':
+                        targets = ['Standardowy', 'Standard', 'Myślenie standardowe', 'Myślenie standardowy', 'Podstawowe myślenie', 'Podstawowy', 'Basic thinking', 'Basic']
+                    else:
+                        targets = ['Myślenie rozszerzone', 'Rozszerzone myślenie', 'Rozszerzone', 'Rozszerzony', 'Extended thinking', 'Extended', 'Zaawansowany']
+
+                    think_section_selectors = [
                         'button:has-text("Poziom myślenia")',
                         'span:has-text("Poziom myślenia")',
                         'div:has-text("Poziom myślenia")',
                         '[role="menu"] button:has-text("Poziom myślenia")',
                         '[role="listbox"] button:has-text("Poziom myślenia")',
+                        'button:has-text("Thinking level")',
+                        '[role="menu"] button:has-text("Thinking level")',
+                        '[role="listbox"] button:has-text("Thinking level")',
                         'button:has-text("Thinking")',
                         '[role="menu"] button:has-text("Thinking")',
                         'button:has-text("Myślenie")',
                         '[role="menu"] button:has-text("Myślenie")',
-                    ]:
-                        try:
-                            elem = page.locator(sel).first
-                            if elem.is_visible(timeout=1000):
-                                elem.click()
-                                print_debug(f"Opened thinking section using: {sel}")
-                                poziom_clicked = True
-                                time.sleep(0.5)
-                                break
-                        except:
-                            continue
+                    ]
 
-                    # Select the target thinking mode
-                    if think_mode == 'basic':
-                        targets = ['Standardowy', 'Myślenie standardowy', 'Podstawowy', 'Basic']
-                    else:
-                        targets = ['Rozszerzony', 'Myślenie rozszerzony', 'Extended', 'Zaawansowany']
-
-                    target_found = False
-                    for target in targets:
+                    def try_select_think_target(target):
                         mode_selectors = [
                             f'[role="menu"] [role="radio"]:text-is("{target}")',
                             f'[role="menu"] button:text-is("{target}")',
@@ -780,6 +776,8 @@ def process_single_prompt(page, prompt, filename_base, output_dir, add_prompt=No
                             f'[role="listbox"] [role="radio"]:text-is("{target}")',
                             f'[role="listbox"] button:text-is("{target}")',
                             f'[role="listbox"] [role="radio"]:has-text("{target}")',
+                            f'[role="radiogroup"] [role="radio"]:has-text("{target}")',
+                            f'[role="menuitemradio"]:has-text("{target}")',
                             f'[role="radio"]:text-is("{target}")',
                             f'button:text-is("{target}")',
                             f'[role="radio"]:has-text("{target}")',
@@ -791,13 +789,66 @@ def process_single_prompt(page, prompt, filename_base, output_dir, add_prompt=No
                                 if elem.is_visible(timeout=1000):
                                     elem.click()
                                     print_debug(f"Selected thinking mode '{target}' using: {sel}")
-                                    target_found = True
+                                    time.sleep(0.5)
+                                    return True
+                            except:
+                                continue
+                        try:
+                            clicked = page.evaluate("""
+                                (targetText) => {
+                                    const target = targetText.toLowerCase();
+                                    const containers = document.querySelectorAll('[role="menu"], [role="listbox"], [role="radiogroup"], [role="group"], .model-selector-menu');
+                                    for (const menu of containers) {
+                                        const walker = document.createTreeWalker(menu, NodeFilter.SHOW_ELEMENT);
+                                        let node;
+                                        while (node = walker.nextNode()) {
+                                            let text = (node.innerText || "").trim();
+                                            let lower = text.toLowerCase();
+                                            if (lower === target || (lower.includes(target) && text.length <= targetText.length + 60)) {
+                                                node.click();
+                                                return true;
+                                            }
+                                        }
+                                    }
+                                    return false;
+                                }
+                            """, target)
+                            if clicked:
+                                print_debug(f"Selected thinking mode '{target}' via JS text walker")
+                                time.sleep(0.5)
+                                return True
+                        except Exception as e:
+                            print_debug(f"JS fallback failed for thinking mode '{target}': {e}")
+                        return False
+
+                    target_found = False
+                    # First try directly - thinking level may already be expanded
+                    for target in targets:
+                        if try_select_think_target(target):
+                            target_found = True
+                            break
+
+                    if not target_found:
+                        # Inside the menu, find and click thinking section to expand it
+                        print_debug("Thinking level options not visible, trying to expand section...")
+                        poziom_clicked = False
+                        for sel in think_section_selectors:
+                            try:
+                                elem = page.locator(sel).first
+                                if elem.is_visible(timeout=1000):
+                                    elem.click()
+                                    print_debug(f"Opened thinking section using: {sel}")
+                                    poziom_clicked = True
                                     time.sleep(0.5)
                                     break
                             except:
                                 continue
-                        if target_found:
-                            break
+
+                        # Retry target selection after expanding the section
+                        for target in targets:
+                            if try_select_think_target(target):
+                                target_found = True
+                                break
 
                     if not target_found:
                         print_warning(f"Could not find thinking mode selector for: {think_mode}")
@@ -2080,7 +2131,7 @@ if __name__ == "__main__":
     proc_group.add_argument("--promptint", type=int, default=1000, help="Fixed delay ms")
     proc_group.add_argument("--promptrnd", help="Random delay range ms")
     proc_group.add_argument("--type", dest="type_arg", type=str.lower, choices=['fast', 'think', 'pro', 'flash', 'flash-lite'], help="Model type: fast, think, pro, flash, flash-lite")
-    proc_group.add_argument("--thinking", dest="think_arg", type=str.lower, choices=['basic', 'extended'], help="Thinking mode: basic or extended (Gemini thinking toggle)")
+    proc_group.add_argument("--thinking", dest="think_arg", type=str.lower, choices=['basic', 'extended', 'extend'], help="Thinking mode: basic or extended ('extend' is alias for 'extended') (Gemini thinking toggle)")
     proc_group.add_argument("--simul", action="store_true", help="Simulate execution and show generated prompts without connecting to browser")
     proc_group.add_argument("--fmt", dest="fmt_arg", help="Aspect ratio: 43 (4:3), 169 (16:9), 11 (1:1)")
     proc_group.add_argument("--res", dest="res_arg", help="Image resolution in pixels: width,height (e.g. 1024,768)")
