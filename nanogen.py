@@ -6,6 +6,15 @@ import time
 import re
 import os
 os.environ["NODE_OPTIONS"] = "--no-warnings"
+
+# Force UTF-8 on Windows consoles to prevent UnicodeEncodeError with Polish chars / symbols
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 import json
 import random
 from datetime import datetime
@@ -17,8 +26,8 @@ init(autoreset=True)
 
 # ---=== Code info ===---
 __CODEAUTH__ = "Igor Brzezek"
-__CODEVER__ = "0.0.22"
-__CODEDATE__ = "02.10.2026"
+__CODEVER__ = "0.23"
+__CODEDATE__ = "16.11.2026"
 __CODEGIT__ = "https://github.com/igorbrzezek/nanogen"
 
 class Logger(object):
@@ -313,7 +322,7 @@ def process_single_prompt(page, prompt, filename_base, output_dir, add_prompt=No
                     print_debug("  Trying keyboard shortcut to open menu...")
                     page.keyboard.press('[')  # [ key opens sidebar in Gemini
                     time.sleep(1)
-                    print_debug("  ✓ Pressed '[' key to open menu")
+                    print_debug("  [OK] Pressed '[' key to open menu")
                 except Exception as e:
                     print_debug(f"  Keyboard shortcut failed: {str(e)[:30]}")
             
@@ -322,6 +331,7 @@ def process_single_prompt(page, prompt, filename_base, output_dir, add_prompt=No
             menu_items_visible = False
             menu_check_selectors = [
                 # Common menu items that appear when sidebar is open
+                '[data-test-id="new-chat-button"]',
                 'text="New chat"',
                 'text="Nowy czat"',
                 '[role="navigation"]',
@@ -334,7 +344,7 @@ def process_single_prompt(page, prompt, filename_base, output_dir, add_prompt=No
                     item = page.locator(selector).first
                     if item.is_visible(timeout=1000):
                         menu_items_visible = True
-                        print_debug(f"  ✓ Menu confirmed open (found: {selector})")
+                        print_debug(f"  [OK] Menu confirmed open (found: {selector})")
                         break
                 except:
                     continue
@@ -371,22 +381,22 @@ def process_single_prompt(page, prompt, filename_base, output_dir, add_prompt=No
                         print_debug(f"    Trying: {selector}")
                         menu_btn = page.locator(selector).first
                         if menu_btn.is_visible(timeout=2000):
-                            print_debug(f"    ✓ Found menu button, clicking...")
+                            print_debug(f"    [OK] Found menu button, clicking...")
                             try:
                                 menu_btn.click(timeout=5000)
                             except:
                                 menu_btn.click(force=True)
                             menu_opened = True
                             time.sleep(2)
-                            print_debug(f"    ✓ Clicked menu button")
+                            print_debug(f"    [OK] Clicked menu button")
                             break
                     except Exception as e:
                         continue
                 
                 if menu_opened:
-                    print_debug("  ✓ Menu should now be expanded")
+                    print_debug("  [OK] Menu should now be expanded")
                 else:
-                    print_debug("  ⚠ Could not click menu button, menu may already be open")
+                    print_debug("  [!] Could not click menu button, menu may already be open")
             
             
             # STEP 2: Now CLICK the appropriate button
@@ -401,7 +411,7 @@ def process_single_prompt(page, prompt, filename_base, output_dir, add_prompt=No
                     if inner_btn.count() > 0:
                         class_attr = inner_btn.get_attribute("class") or ""
                         if "temp-chat-on" in class_attr:
-                            print_debug("✓ Temporary chat is ALREADY active (temp-chat-on class present). Skipping click.")
+                            print_debug("[OK] Temporary chat is ALREADY active (temp-chat-on class present). Skipping click.")
                             button_found = True
                         else:
                             print_debug("Temporary chat is not active. Clicking to activate...")
@@ -410,7 +420,7 @@ def process_single_prompt(page, prompt, filename_base, output_dir, add_prompt=No
                             # Re-verify
                             class_attr_after = inner_btn.get_attribute("class") or ""
                             if "temp-chat-on" in class_attr_after:
-                                print_debug("✓ Temporary chat activated successfully!")
+                                print_debug("[OK] Temporary chat activated successfully!")
                                 button_found = True
                             else:
                                 print_warning("Clicked temporary chat button but 'temp-chat-on' class is still not present.")
@@ -450,7 +460,7 @@ def process_single_prompt(page, prompt, filename_base, output_dir, add_prompt=No
                             print_debug(f"  Trying legacy selector: {selector}")
                             temp_button = page.locator(selector).first
                             if temp_button.is_visible(timeout=3000):
-                                print_debug(f"  ✓ FOUND with: {selector}")
+                                print_debug(f"  [OK] FOUND with: {selector}")
                                 # Avoid clicking if it is already active
                                 is_active = False
                                 try:
@@ -461,7 +471,7 @@ def process_single_prompt(page, prompt, filename_base, output_dir, add_prompt=No
                                     pass
                                 
                                 if is_active:
-                                    print_debug("  ✓ Temporary chat appears to be already active from HTML inspection. Skipping click.")
+                                    print_debug("  [OK] Temporary chat appears to be already active from HTML inspection. Skipping click.")
                                     button_found = True
                                     break
                                     
@@ -473,7 +483,7 @@ def process_single_prompt(page, prompt, filename_base, output_dir, add_prompt=No
                                 except:
                                     # If fails, try force click
                                     temp_button.click(force=True)
-                                print_debug(f"  ✓✓✓ CLICKED 'Czat tymczasowy' SUCCESSFULLY! ✓✓✓")
+                                print_debug(f"  [OK] CLICKED 'Czat tymczasowy' SUCCESSFULLY!")
                                 button_found = True
                                 time.sleep(3)
                                 break
@@ -481,7 +491,7 @@ def process_single_prompt(page, prompt, filename_base, output_dir, add_prompt=No
                             continue
                 
                 if button_found:
-                    print_debug("*** ✓✓✓ TEMPORARY CHAT ACTIVATED ✓✓✓ ***")
+                    print_debug("*** [OK] TEMPORARY CHAT ACTIVATED ***")
                 else:
                     print_warning("!!! 'Czat tymczasowy' button NOT FOUND !!!")
             
@@ -493,6 +503,7 @@ def process_single_prompt(page, prompt, filename_base, output_dir, add_prompt=No
                     print_debug("Looking for 'Nowy czat' / 'New chat' button as fallback...")
                     
                 new_chat_selectors = [
+                    '[data-test-id="new-chat-button"]',
                     'text="Nowy czat"',
                     'text="New chat"',
                     'span:has-text("Nowy czat")',
@@ -515,7 +526,7 @@ def process_single_prompt(page, prompt, filename_base, output_dir, add_prompt=No
                                 btn.click(timeout=5000)
                             except:
                                 btn.click(force=True)
-                            print_debug(f"  ✓✓✓ CLICKED 'Nowy czat' SUCCESSFULLY! ✓✓✓")
+                            print_debug(f"  [OK] CLICKED 'Nowy czat' SUCCESSFULLY!")
                             new_chat_found = True
                             time.sleep(3)
                             break
@@ -579,8 +590,8 @@ def process_single_prompt(page, prompt, filename_base, output_dir, add_prompt=No
                 # Fallback: click any visible button that shows current model name
                 if not selector_opened:
                     print_debug("Exact selectors failed, trying model name buttons as dropdown openers...")
-                    all_model_names = ['Szybki', 'Szybkie', 'Myślący', 'Myślenie', 'Flash 2.0', 'Flash-Lite', 'Flash',
-                                       'Thinking', 'Pro 2.0', 'Pro', 'Zaawansowany', 'Gemini']
+                    all_model_names = ['Hydrogen', '4 Hydrogen', 'Flash-Lite', '3.5 Flash-Lite', 'Argon', '4 Argon', 'Carbon', '4 Carbon', 'Szybki', 'Szybkie', 'Myślący', 'Myślenie', 'Flash 2.0', 'Flash',
+                                       'Thinking', 'Pro 2.0', '3.1 Pro', 'Pro', 'Zaawansowany', 'Gemini']
                     for model_name in all_model_names:
                         try:
                             btn = page.locator(f'button:has-text("{model_name}")').first
@@ -600,11 +611,12 @@ def process_single_prompt(page, prompt, filename_base, output_dir, add_prompt=No
                 # W menu numery wersji modeli (np. Pro 2.0 / Flash 2.5) zmieniaja sie,
                 # dlatego szukamy tylko po frazie modelu - bez numerow wersji.
                 type_mapping = {
-                    'fast': ['Flash', 'Szybki', 'Szybkie', 'Fast'],
-                    'think': ['Myślący', 'Myślenie', 'Thinking', 'Deep Thinking'],
-                    'pro': ['Pro'],
-                    'flash': ['Flash'],
-                    'flash-lite': ['Flash-Lite', 'Flash Lite']
+                    'fast': ['Hydrogen', '4 Hydrogen', 'Flash', 'Szybki', 'Szybkie', 'Fast'],
+                    'think': ['Argon', '4 Argon', 'Myślący', 'Myślenie', 'Thinking', 'Deep Thinking'],
+                    'pro': ['3.1 Pro', 'Pro', 'Pro 2.0'],
+                    'flash': ['Hydrogen', '4 Hydrogen', 'Flash'],
+                    'flash-lite': ['Flash-Lite', '3.5 Flash-Lite', 'Flash Lite'],
+                    'carbon': ['Carbon', '4 Carbon']
                 }
                 
                 search_terms = type_mapping.get(type_arg.lower(), [])
@@ -940,6 +952,12 @@ def process_single_prompt(page, prompt, filename_base, output_dir, add_prompt=No
             
             if not create_clicked:
                 print_debug("Could not find Create images option, mode may already be active...")
+                if tools_clicked:
+                    try:
+                        page.keyboard.press("Escape")
+                        time.sleep(0.5)
+                    except:
+                        pass
         
         except Exception as e:
             print_warning(f"Error during tool activation: {e}")
@@ -950,12 +968,26 @@ def process_single_prompt(page, prompt, filename_base, output_dir, add_prompt=No
     # Apply --insprompt logic (Prepend to user prompt)
     working_prompt = prompt
     if insp_prompt:
-        # Check if insp_prompt ends with dot
-        if insp_prompt.strip().endswith('.'):
-             working_prompt = f"{insp_prompt} {working_prompt}"
+        clean_insp = insp_prompt.strip()
+        if clean_insp.lower().endswith(('of', 'for', 'with', 'about', ':', ',')):
+            working_prompt = f"{clean_insp} {working_prompt}"
+        elif clean_insp.endswith('.'):
+            working_prompt = f"{clean_insp} {working_prompt}"
         else:
-             working_prompt = f"{insp_prompt}. {working_prompt}"
+            working_prompt = f"{clean_insp}. {working_prompt}"
         print_debug(f"Prepended insprompt. Working prompt: {working_prompt[:50]}...")
+    else:
+        # Check if the prompt already contains an image directive
+        image_keywords = [
+            "generate an image", "create an image", "draw an image", "make an image",
+            "generate image", "create image", "paint an image", "render an image",
+            "wygeneruj obraz", "utwórz obraz", "stwórz obraz", "namaluj obraz", "narysuj obraz",
+            "generate a picture", "create a picture", "obraz:"
+        ]
+        has_image_directive = any(kw in working_prompt.lower() for kw in image_keywords)
+        if not has_image_directive:
+            working_prompt = f"Generate an image of {working_prompt}"
+            print_debug(f"Auto-prepended image generation directive: {working_prompt[:60]}...")
     
     # Apply --addprompt logic (Append to user prompt)
     if add_prompt:
@@ -1147,6 +1179,9 @@ def process_single_prompt(page, prompt, filename_base, output_dir, add_prompt=No
         try:
             entered_text = input_locator.inner_text()
             print_debug(f"Entered text length: {len(entered_text)}, expected: {len(final_prompt)}")
+            if len(entered_text.strip()) == 0:
+                print_debug("Pasted text empty, falling back to fill()...")
+                input_locator.fill(final_prompt)
         except:
             print_debug("Could not verify entered text")
         # Submit the prompt by clicking the send button (arrow)
@@ -1318,6 +1353,8 @@ def process_single_prompt(page, prompt, filename_base, output_dir, add_prompt=No
             "nie mogę wygenerować", "can't generate", "cannot generate",
             "nie potrafię wygenerować", "nie jestem w stanie",
             "something went wrong", "wystąpił błąd", "błąd podczas",
+            "encountered an error", "hard time fulfilling your request",
+            "can't help with that", "cannot help with that",
             "przekroczono limit", "limit reached", "too many requests",
             "policy violation", "zasadami użytkowania", "naruszenie zasad"
         ]
@@ -1342,6 +1379,11 @@ def process_single_prompt(page, prompt, filename_base, output_dir, add_prompt=No
                                 return process_single_prompt(page, prompt, filename_base, output_dir, add_prompt, insp_prompt, fmt_arg, res_arg, resx_arg, resy_arg, type_arg, min_gen_time, dl_timeout_sec, download_retries, progress_prefix, limit_attempt + 1)
                             else:
                                 print_error(f"\n[ERROR] Rate limit reached and all {limit_retries} retries exhausted.")
+                        
+                        # If Gemini fails on Pro (frequent internal error on dense prompts), fallback to fast (Hydrogen)
+                        if type_arg == 'pro' and limit_attempt == 0:
+                            print_warning(f"\n[MODEL FALLBACK] Gemini error detected on Pro model ('{indicator}'). Retrying with fast model (Hydrogen)...")
+                            return process_single_prompt(page, prompt, filename_base, output_dir, add_prompt, insp_prompt, fmt_arg, res_arg, resx_arg, resy_arg, 'fast', think_mode, min_gen_time, dl_timeout_sec, download_retries, progress_prefix, limit_attempt + 1)
                         
                         print_error(f"Gemini refusal or error detected: '{indicator}'")
                         FAIL_COUNT += 1
@@ -2408,6 +2450,15 @@ if __name__ == "__main__":
         print("  --dlrestart N       Restart entire generation process on failure (default: 0, requires --skip).")
         print("  --limitwait N       Wait time in seconds when Gemini rate limit is reached (default: 300).")
         
+        print("\nLogin Options (automated Google sign-in):")
+        print("  --login EMAIL        Google account e-mail")
+        print("  --logname EMAIL       Alias for --login")
+        print("  --pwd PASSWORD        Google password")
+        print("  --password PASSWORD   Alias for --pwd")
+        print("  --pwdsilent           Prompt for password without echoing")
+        print("  --loginfile FILE      File with credentials (pairs: email + password per account)")
+        print("")
+
         print("\nConnection Options:")
         print("  --host HOST         Browser host for CDP connection (default: localhost).")
         print("  --port PORT         Browser port for CDP connection (default: 9222).")
